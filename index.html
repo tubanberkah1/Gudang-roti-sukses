@@ -1,3 +1,29 @@
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  function pasangFilter() {
+    document.querySelectorAll('table').forEach(function (tbl) {
+      if (tbl.dataset.filter) return;
+      tbl.dataset.filter = '1';
+
+      var box = document.createElement('input');
+      box.type = 'search';
+      box.placeholder = '🔍 Cari nama item...';
+      box.style.cssText = 'width:100%;padding:8px;margin:6px 0;box-sizing:border-box';
+
+      box.addEventListener('input', function () {
+        var q = box.value.toLowerCase();
+        tbl.querySelectorAll('tbody tr').forEach(function (tr) {
+          tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+        });
+      });
+
+      tbl.parentNode.insertBefore(box, tbl);
+    });
+  }
+  new MutationObserver(pasangFilter).observe(document.body, { childList: true, subtree: true });
+  pasangFilter();
+});
+</script>
 <!DOCTYPE html><html lang="id"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
