@@ -1,29 +1,3 @@
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  function pasangFilter() {
-    document.querySelectorAll('table').forEach(function (tbl) {
-      if (tbl.dataset.filter) return;
-      tbl.dataset.filter = '1';
-
-      var box = document.createElement('input');
-      box.type = 'search';
-      box.placeholder = '🔍 Cari nama item...';
-      box.style.cssText = 'width:100%;padding:8px;margin:6px 0;box-sizing:border-box';
-
-      box.addEventListener('input', function () {
-        var q = box.value.toLowerCase();
-        tbl.querySelectorAll('tbody tr').forEach(function (tr) {
-          tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
-        });
-      });
-
-      tbl.parentNode.insertBefore(box, tbl);
-    });
-  }
-  new MutationObserver(pasangFilter).observe(document.body, { childList: true, subtree: true });
-  pasangFilter();
-});
-</script>
 <!DOCTYPE html><html lang="id"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -3358,3 +3332,177 @@ function attachHandlers(){
 </script>
 
 </body></html>
+<!DOCTYPE html><html lang="id"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gudang Roti</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>:root { --cream: rgb(251,247,238); --wheat: rgb(232,220,192); --brown: rgb(74,55,40); --brown-soft: rgb(138,111,82); --amber: rgb(198,138,46); --teal: rgb(46,110,98); --red: rgb(180,68,46); --blue: rgb(46,92,138); --line: rgb(220,208,178); --white: rgb(255,255,255); }* { box-sizing: border-box; }body { margin: 0; font-family: "Segoe UI", system-ui, -apple-system, sans-serif; background: var(--cream); color: var(--brown); }header { background: var(--brown); color: var(--cream); padding: 16px 22px 16px 22px; display: flex; align-items: center; gap: 12px; }header .icon { width: 36px; height: 36px; border-radius: 8px; background: var(--amber); display: flex; align-items: center; justify-content: center; font-size: 19px; }header h1 { font-size: 18px; margin: 0; letter-spacing: 0.3px; }header p { margin: 2px 0 0 0; font-size: 11.5px; color: var(--wheat); }nav { display: flex; background: var(--white); border: 1px solid var(--line); overflow-x: auto; }nav button { padding: 12px 16px 12px 16px; border-top: none; border-right: none; border-bottom: 3px solid transparent; border-left: none; background: none; font-size: 13px; font-weight: 600; color: var(--brown-soft); cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 6px; }nav button.active { color: var(--brown); border: 3px solid var(--amber); }nav button .badge { background: var(--amber); color: rgb(255, 255, 255); font-size: 10px; font-weight: 700; padding: 1px 6px 1px 6px; border-radius: 20px; }main { padding: 18px; max-width: 1150px; margin: 0 auto 0 auto; }.card { background: var(--white); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 14px; }.card h2 { margin: 0 0 4px 0; font-size: 15px; }.card .sub { font-size: 12px; color: var(--brown-soft); margin-bottom: 12px; }.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }.stat { background: var(--cream); border: 1px solid var(--line); border-radius: 8px; padding: 11px 13px 11px 13px; }.stat .label { font-size: 10.5px; color: var(--brown-soft); text-transform: uppercase; letter-spacing: 0.4px; }.stat .value { font-size: 18px; font-weight: 700; margin-top: 3px; }.stat.pos .value { color: var(--teal); }.stat.neg .value { color: var(--red); }form.inline { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }.field { display: flex; flex-direction: column; gap: 4px; }.field label { font-size: 11.5px; color: var(--brown-soft); font-weight: 600; }.field input, .field select { padding: 8px 9px 8px 9px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; background: var(--cream); color: var(--brown); min-width: 110px; }button.primary { background: var(--amber); color: rgb(255, 255, 255); border: none; padding: 9px 16px 9px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }button.primary:hover { opacity: 0.9; }button.danger { background: none; border: none; color: var(--red); cursor: pointer; font-size: 12px; font-weight: 600; }table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 8px; }th { text-align: left; padding: 8px 9px 8px 9px; background: var(--cream); border: 2px solid var(--line); font-size: 11px; text-transform: uppercase; color: var(--brown-soft); letter-spacing: 0.3px; }td { padding: 7px 9px 7px 9px; border: 1px solid var(--line); }.kode-badge { font: 700 11.5px monospace; background: var(--wheat); padding: 2px 6px 2px 6px; border-radius: 5px; }.tag { display: inline-block; padding: 2px 8px 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }.tag.premix { background: rgb(241, 225, 198); color: rgb(138, 90, 22); }.tag.bahan { background: rgb(220, 234, 226); color: var(--teal); }.tag.kardus { background: rgb(228, 220, 239); color: rgb(108, 74, 156); }.sisa-ok { color: var(--teal); font-weight: 700; }.sisa-low { color: var(--red); font-weight: 700; }.empty { padding: 18px; text-align: center; color: var(--brown-soft); font-size: 13px; }
+header .datatools { margin-left: auto; display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+header .datatools button { background: rgb(255,255,255,0.12); color: var(--cream); border: 1px solid rgb(255,255,255,0.28); padding: 7px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+#db-status { font-size: 11.5px; color: var(--wheat); white-space: nowrap; }</style>
+</head>
+<body>
+
+<header>
+  <div class="icon">🍞</div>
+  <div>
+    <h1>Gudang Roti</h1>
+    <p>Kode · Masuk · Keluar · Arus (Sisa Stok) · Produksi · Packing</p>
+  </div>
+  <div class="datatools">
+    <span id="db-status">⏳ Menyambung...</span>
+    <button id="btn-refresh-db" type="button">🔄 Refresh</button>
+    <button id="btn-export-excel" type="button">⬇ Export Excel</button>
+    <button id="btn-import-excel" type="button">⬆ Import Excel</button>
+    <input type="file" id="input-import-excel" accept=".xlsx,.xls" style="display:none;">
+  </div>
+</header>
+
+<nav id="nav"></nav>
+<main id="main"><div class="empty">Memuat data...</div></main>
+
+<script>
+const KATEGORI = {
+  premix: {label:'Premix'},
+  bahan: {label:'Bahan Baku'},
+  kardus: {label:'Kardus'}
+};
+
+const SUPABASE_URL = 'https://iqhozesxcwlsejnmrwey.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_doaiLiO_7KEk68e6zSIUdA_vm0LrFJ1';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let items=[], trx=[], produksi=[], packing=[], penjualan=[], opname=[], retur=[], riwayatEdit=[];
+let activeTab='masuk';
+let masukSelectedItemId=null;
+
+function rupiah(n){ return 'Rp'+Math.round(n||0).toLocaleString('id-ID'); }
+function itemById(id){ return items.find(x=>x.id===id); }
+function stokItem(itemId){
+  let masuk=0, keluar=0;
+  trx.filter(t=>t.itemId===itemId).forEach(t=>{ if(t.tipe==='masuk') masuk+=t.qty; else keluar+=t.qty; });
+  return {masuk, keluar, sisa: masuk-keluar};
+}
+
+async function loadAll(){
+  try {
+    const { data: dataItems } = await sb.from('items').select('data');
+    const { data: dataTrx } = await sb.from('trx').select('data');
+    items = (dataItems||[]).map(r=>r.data);
+    trx = (dataTrx||[]).map(r=>r.data);
+    document.getElementById('db-status').textContent = '🟢 Online';
+  } catch(e) {
+    document.getElementById('db-status').textContent = '🔴 Offline';
+  }
+}
+
+const TABS = [
+  {id:'menu', label:'Menu'},
+  {id:'kode', label:'Kode'},
+  {id:'masuk', label:'Masuk'},
+  {id:'keluar', label:'Keluar'},
+  {id:'arus', label:'Arus'}
+];
+
+function renderNav(){
+  const nav = document.getElementById('nav');
+  nav.innerHTML = TABS.map(t=> `<button data-tab="${t.id}" class="${t.id===activeTab?'active':''}">${t.label}</button>`).join('');
+  nav.querySelectorAll('button').forEach(b=> b.onclick=()=>{ activeTab=b.dataset.tab; renderAll(); });
+}
+
+function renderAll(){
+  renderNav();
+  const main = document.getElementById('main');
+  if(activeTab==='masuk') main.innerHTML = viewMasuk();
+  else if(activeTab==='menu') main.innerHTML = viewMenu();
+  else main.innerHTML = `<div class="card"><h2>Tab ${activeTab}</h2><p>Halaman dalam pengembangan.</p></div>`;
+  
+  if(activeTab==='masuk') attachMasukEvents();
+}
+
+function viewMenu(){
+  return `<div class="card"><h2>Ringkasan Gudang</h2><p>Pilih tab <b>Masuk</b> untuk menginput barang masuk.</p></div>`;
+}
+
+// VIEW MASUK DENGAN PENCARIAN (DATALIST)
+function viewMasuk(){
+  const listMasuk = trx.filter(t=>t.tipe==='masuk');
+  return `
+  <div class="card">
+    <h2>Input Barang Masuk</h2>
+    <div class="sub">Ketik Kode/Nama Barang atau pilih dari daftar pencarian</div>
+    <form class="inline" id="form-masuk" onsubmit="return false;">
+      <div class="field">
+        <label>Kode / Nama Barang</label>
+        <input type="text" id="masuk-search" list="dl-items" placeholder="Ketik kode/nama..." autocomplete="off" style="width:260px;">
+        <datalist id="dl-items">
+          ${items.map(i=> `<option value="${i.kode} -${i.nama}" data-id="${i.id}">[${KATEGORI[i.kategori]?.label||i.kategori}] Stok: ${stokItem(i.id).sisa}${i.satuan}</option>`).join('')}
+        </datalist>
+      </div>
+      <div class="field">
+        <label>Jumlah Masuk</label>
+        <input type="number" id="masuk-qty" step="any" placeholder="0" style="width:100px;">
+      </div>
+      <div class="field">
+        <label>Tanggal</label>
+        <input type="date" id="masuk-tgl" value="${new Date().toISOString().slice(0,10)}">
+      </div>
+      <button class="primary" type="button" id="btn-simpan-masuk">Simpan Masuk</button>
+    </form>
+  </div>
+  <div class="card">
+    <h2>Riwayat Barang Masuk</h2>
+    <table>
+      <thead><tr><th>Tanggal</th><th>Kode</th><th>Nama Barang</th><th>Jumlah</th></tr></thead>
+      <tbody>
+        ${listMasuk.length===0 ? '<tr><td colspan="4" class="empty">Belum ada transaksi masuk</td></tr>' :
+          listMasuk.map(t=>{
+            const it = itemById(t.itemId);
+            return `<tr><td>${t.tanggal}</td><td><span class="kode-badge">${it?it.kode:'-'}</span></td><td>${it?it.nama:'Barang Dihapus'}</td><td><b>+${t.qty}</b>${it?it.satuan:''}</td></tr>`;
+          }).reverse().join('')
+        }
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function attachMasukEvents(){
+  const searchInput = document.getElementById('masuk-search');
+  const btnSimpan = document.getElementById('btn-simpan-masuk');
+
+  btnSimpan.onclick = async () => {
+    const val = searchInput.value.trim();
+    const qty = parseFloat(document.getElementById('masuk-qty').value)||0;
+    const tgl = document.getElementById('masuk-tgl').value;
+
+    // Cari ID barang dari input teks
+    const match = items.find(i => `${i.kode} - ${i.nama}` === val || i.kode.toLowerCase() === val.toLowerCase() || i.nama.toLowerCase() === val.toLowerCase());
+    
+    if(!match){
+      alert('Barang tidak ditemukan! Pilih barang dari daftar pencarian yang muncul.');
+      return;
+    }
+    if(qty <= 0){
+      alert('Masukkan jumlah barang masuk!');
+      return;
+    }
+
+    const rec = { id: Date.now().toString(36), itemId: match.id, tipe:'masuk', qty: qty, tanggal: tgl };
+    trx.push(rec);
+    
+    // Simpan ke database Supabase
+    await sb.from('trx').insert([{id: rec.id, data: rec}]);
+    alert('Barang masuk berhasil disimpan!');
+    renderAll();
+  };
+}
+
+window.onload = async () => {
+  await loadAll();
+  renderAll();
+};
+</script>
+</body>
+</html>
