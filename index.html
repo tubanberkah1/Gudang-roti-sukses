@@ -3504,5 +3504,263 @@ window.onload = async () => {
   renderAll();
 };
 </script>
+<!DOCTYPE html><html lang="id"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gudang Roti</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root { --cream: rgb(251,247,238); --wheat: rgb(232,220,192); --brown: rgb(74,55,40); --brown-soft: rgb(138,111,82); --amber: rgb(198,138,46); --teal: rgb(46,110,98); --red: rgb(180,68,46); --blue: rgb(46,92,138); --line: rgb(220,208,178); --white: rgb(255,255,255); }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "Segoe UI", system-ui, -apple-system, sans-serif; background: var(--cream); color: var(--brown); }
+header { background: var(--brown); color: var(--cream); padding: 16px 22px; display: flex; align-items: center; gap: 12px; }
+header .icon { width: 36px; height: 36px; border-radius: 8px; background: var(--amber); display: flex; align-items: center; justify-content: center; font-size: 19px; }
+header h1 { font-size: 18px; margin: 0; letter-spacing: 0.3px; }
+header p { margin: 2px 0 0 0; font-size: 11.5px; color: var(--wheat); }
+nav { display: flex; background: var(--white); border: 1px solid var(--line); overflow-x: auto; }
+nav button { padding: 12px 16px; border: none; border-bottom: 3px solid transparent; background: none; font-size: 13px; font-weight: 600; color: var(--brown-soft); cursor: pointer; white-space: nowrap; }
+nav button.active { color: var(--brown); border-bottom-color: var(--amber); }
+main { padding: 18px; max-width: 1150px; margin: 0 auto; }
+.card { background: var(--white); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 14px; position: relative; }
+.card h2 { margin: 0 0 4px 0; font-size: 15px; }
+.card .sub { font-size: 12px; color: var(--brown-soft); margin-bottom: 12px; }
+form.inline { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.field { display: flex; flex-direction: column; gap: 4px; position: relative; }
+.field label { font-size: 11.5px; color: var(--brown-soft); font-weight: 600; }
+.field input, .field select { padding: 8px 9px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; background: var(--cream); color: var(--brown); min-width: 140px; }
+button.primary { background: var(--amber); color: #fff; border: none; padding: 9px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+button.primary:hover { opacity: 0.9; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 8px; }
+th { text-align: left; padding: 8px 9px; background: var(--cream); border: 1px solid var(--line); font-size: 11px; text-transform: uppercase; color: var(--brown-soft); }
+td { padding: 7px 9px; border: 1px solid var(--line); }
+.kode-badge { font: 700 11.5px monospace; background: var(--wheat); padding: 2px 6px; border-radius: 5px; }
+.empty { padding: 18px; text-align: center; color: var(--brown-soft); font-size: 13px; }
+header .datatools { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+#db-status { font-size: 11.5px; color: var(--wheat); }
+
+/* STYLES MENU PENCARIAN CUSTOM */
+.search-container { position: relative; width: 280px; }
+.search-results {
+  position: absolute; top: 100%; left: 0; right: 0;
+  background: var(--white); border: 1px solid var(--amber);
+  border-radius: 6px; max-height: 200px; overflow-y: auto;
+  z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  display: none; margin-top: 4px;
+}
+.search-item {
+  padding: 8px 12px; cursor: pointer; font-size: 12.5px;
+  border-bottom: 1px solid var(--cream);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.search-item:last-child { border-bottom: none; }
+.search-item:hover, .search-item.selected { background: var(--cream); }
+.search-item .item-code { font-weight: bold; color: var(--brown); }
+.search-item .item-stok { font-size: 11px; color: var(--teal); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="icon">🍞</div>
+  <div>
+    <h1>Gudang Roti</h1>
+    <p>Kode · Masuk · Keluar · Arus (Sisa Stok) · Produksi · Packing</p>
+  </div>
+  <div class="datatools">
+    <span id="db-status">⏳ Menyambung...</span>
+  </div>
+</header>
+
+<nav id="nav"></nav>
+<main id="main"><div class="empty">Memuat data...</div></main>
+
+<script>
+const KATEGORI = {
+  premix: {label:'Premix'},
+  bahan: {label:'Bahan Baku'},
+  kardus: {label:'Kardus'}
+};
+
+const SUPABASE_URL = 'https://iqhozesxcwlsejnmrwey.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_doaiLiO_7KEk68e6zSIUdA_vm0LrFJ1';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let items=[], trx=[];
+let activeTab='masuk';
+let selectedItemId = null;
+
+function itemById(id){ return items.find(x=>x.id===id); }
+function stokItem(itemId){
+  let masuk=0, keluar=0;
+  trx.filter(t=>t.itemId===itemId).forEach(t=>{ if(t.tipe==='masuk') masuk+=t.qty; else keluar+=t.qty; });
+  return {masuk, keluar, sisa: masuk-keluar};
+}
+
+async function loadAll(){
+  try {
+    const { data: dataItems } = await sb.from('items').select('data');
+    const { data: dataTrx } = await sb.from('trx').select('data');
+    items = (dataItems||[]).map(r=>r.data);
+    trx = (dataTrx||[]).map(r=>r.data);
+    document.getElementById('db-status').textContent = '🟢 Online';
+  } catch(e) {
+    document.getElementById('db-status').textContent = '🔴 Offline';
+  }
+}
+
+const TABS = [
+  {id:'masuk', label:'Masuk'},
+  {id:'keluar', label:'Keluar'},
+  {id:'kode', label:'Kode'},
+  {id:'arus', label:'Arus'}
+];
+
+function renderNav(){
+  const nav = document.getElementById('nav');
+  nav.innerHTML = TABS.map(t=> `<button data-tab="${t.id}" class="${t.id===activeTab?'active':''}">${t.label}</button>`).join('');
+  nav.querySelectorAll('button').forEach(b=> b.onclick=()=>{ activeTab=b.dataset.tab; renderAll(); });
+}
+
+function renderAll(){
+  renderNav();
+  const main = document.getElementById('main');
+  if(activeTab==='masuk') main.innerHTML = viewMasuk();
+  else main.innerHTML = `<div class="card"><h2>Tab ${activeTab}</h2><p>Pilih tab <b>Masuk</b> untuk menguji pencarian.</p></div>`;
+  
+  if(activeTab==='masuk') attachSearchEvents();
+}
+
+function viewMasuk(){
+  const listMasuk = trx.filter(t=>t.tipe==='masuk');
+  return `
+  <div class="card">
+    <h2>Input Barang Masuk</h2>
+    <div class="sub">Ketik Kode atau Nama Barang untuk membuka menu pencarian</div>
+    <form class="inline" id="form-masuk" onsubmit="return false;">
+      
+      <div class="field search-container">
+        <label>Cari Kode / Nama Barang</label>
+        <input type="text" id="input-cari-barang" placeholder="Klik atau ketik di sini..." autocomplete="off">
+        <input type="hidden" id="selected-item-id">
+        <!-- Container Dropdown Pencarian Custom -->
+        <div class="search-results" id="search-results-list"></div>
+      </div>
+
+      <div class="field">
+        <label>Jumlah Masuk</label>
+        <input type="number" id="masuk-qty" step="any" placeholder="0" style="width:100px;">
+      </div>
+      
+      <div class="field">
+        <label>Tanggal</label>
+        <input type="date" id="masuk-tgl" value="${new Date().toISOString().slice(0,10)}">
+      </div>
+      
+      <button class="primary" type="button" id="btn-simpan-masuk">Simpan Masuk</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Riwayat Barang Masuk</h2>
+    <table>
+      <thead><tr><th>Tanggal</th><th>Kode</th><th>Nama Barang</th><th>Jumlah</th></tr></thead>
+      <tbody>
+        ${listMasuk.length===0 ? '<tr><td colspan="4" class="empty">Belum ada transaksi masuk</td></tr>' :
+          listMasuk.slice().reverse().map(t=>{
+            const it = itemById(t.itemId);
+            return `<tr><td>${t.tanggal}</td><td><span class="kode-badge">${it?it.kode:'-'}</span></td><td>${it?it.nama:'Barang Dihapus'}</td><td><b>+${t.qty}</b>${it?it.satuan:''}</td></tr>`;
+          }).join('')
+        }
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function attachSearchEvents(){
+  const searchInput = document.getElementById('input-cari-barang');
+  const resultsList = document.getElementById('search-results-list');
+  const hiddenIdInput = document.getElementById('selected-item-id');
+  const btnSimpan = document.getElementById('btn-simpan-masuk');
+
+  // Fungsi menampilkan/menyaring daftar barang
+  function updateSearchResults(query = '') {
+    const q = query.toLowerCase().trim();
+    const filtered = items.filter(i => 
+      i.kode.toLowerCase().includes(q) || i.nama.toLowerCase().includes(q)
+    );
+
+    if(filtered.length === 0){
+      resultsList.innerHTML = `<div class="search-item" style="color:#999;">Barang tidak ditemukan</div>`;
+    } else {
+      resultsList.innerHTML = filtered.map(i => `
+        <div class="search-item" data-id="${i.id}" data-text="[${i.kode}] ${i.nama}">
+          <div>
+            <span class="item-code">[${i.kode}]</span> ${i.nama}
+          </div>
+          <span class="item-stok">Stok: ${stokItem(i.id).sisa} ${i.satuan}</span>
+        </div>
+      `).join('');
+    }
+    resultsList.style.display = 'block';
+  }
+
+  // Event saat kolom diklik / difokuskan
+  searchInput.onfocus = () => {
+    updateSearchResults(searchInput.value);
+  };
+
+  // Event saat user mengetik
+  searchInput.oninput = () => {
+    hiddenIdInput.value = ''; // Reset ID jika user mengubah ketikan
+    updateSearchResults(searchInput.value);
+  };
+
+  // Event saat memilih item dari menu dropdown
+  resultsList.onclick = (e) => {
+    const itemEl = e.target.closest('.search-item');
+    if(itemEl && itemEl.dataset.id){
+      hiddenIdInput.value = itemEl.dataset.id;
+      searchInput.value = itemEl.dataset.text;
+      resultsList.style.display = 'none'; // Sembunyikan menu
+    }
+  };
+
+  // Sembunyikan menu saat klik di luar area input
+  document.onclick = (e) => {
+    if(!e.target.closest('.search-container')){
+      resultsList.style.display = 'none';
+    }
+  };
+
+  // Event Simpan Barang Masuk
+  btnSimpan.onclick = async () => {
+    const itemId = hiddenIdInput.value;
+    const qty = parseFloat(document.getElementById('masuk-qty').value)||0;
+    const tgl = document.getElementById('masuk-tgl').value;
+
+    if(!itemId){
+      alert('Silakan klik dan pilih salah satu barang dari menu pencarian yang muncul!');
+      return;
+    }
+    if(qty <= 0){
+      alert('Masukkan jumlah barang masuk!');
+      return;
+    }
+
+    const rec = { id: Date.now().toString(36), itemId: itemId, tipe:'masuk', qty: qty, tanggal: tgl };
+    trx.push(rec);
+    
+    await sb.from('trx').insert([{id: rec.id, data: rec}]);
+    alert('Barang masuk berhasil disimpan!');
+    renderAll();
+  };
+}
+
+window.onload = async () => {
+  await loadAll();
+  renderAll();
+};
+</script>
 </body>
 </html>
